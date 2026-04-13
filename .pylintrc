@@ -1,0 +1,8 @@
+[MESSAGES CONTROL]
+disable=
+    C0114, # Module docstring
+    C0115, # Class docstring
+    C0116, # Function docstring
+    C0103, # Variable names (ex: id, db, i)
+    R0903, # Too few public methods (pour les petites classes)
+    W0511  # TODO notes (pour ne pas bloquer si tu laisses un # TODO)
