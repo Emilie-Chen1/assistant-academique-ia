@@ -82,3 +82,46 @@ if __name__ == "__main__":
     pages = load_documents()
     splits = split_documents(pages)
     vectorstore = get_vectorstore()
+
+# ─────────────────────────────────────────────
+# ÉTAPE 5 — QA Chain + fonction finale
+# ─────────────────────────────────────────────
+
+def build_qa_chain(vectorstore):
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+
+    template = """Tu es un assistant pédagogique spécialisé dans les notes de cours.
+Réponds à la question uniquement à partir du contexte fourni.
+Si la réponse n'est pas dans le contexte, dis clairement que tu ne sais pas.
+Réponds toujours en français, de façon claire et structurée.
+
+Contexte :
+{context}
+
+Question : {question}
+
+Réponse :"""
+
+    prompt = PromptTemplate.from_template(template)
+    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 3})
+
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+    chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+    return chain
+
+def rag_answer(question: str) -> str:
+    vectorstore = get_vectorstore()
+    chain = build_qa_chain(vectorstore)
+    return chain.invoke(question)
+
+if __name__ == "__main__":
+    res = rag_answer("Qu'est-ce que le RAG ?")
+    print("\n=== RÉPONSE ===")
+    print(res)
