@@ -1,16 +1,33 @@
 from dotenv import load_dotenv, find_dotenv
 from langchain.agents import create_agent
+from langchain_core.tools import tool
+from tavily import TavilyClient
 
 load_dotenv(find_dotenv())
 
-AGENT_MODEL = "openai:gpt-4o-mini"
-AGENT_TOOLS = []
+_tavily = TavilyClient()
 
+
+@tool
+def web_search(query: str) -> str:
+    """Recherche web générale via Tavily."""
+    try:
+        result = _tavily.search(query, max_results=5)
+        return str(result)
+    except Exception as e:
+        return f"Erreur recherche web: {e}"
+
+
+AGENT_MODEL = "openai:gpt-4o-mini"
+AGENT_TOOLS = [web_search]
 
 _agent = create_agent(
     model=AGENT_MODEL,
     tools=AGENT_TOOLS,
-    system_prompt="Tu es un assistant utile. Réponds en français.",
+    system_prompt=
+        "Tu es un assistant utile. "
+        "Utilise web_search pour les recherches web. "
+        "Réponds en français.",
 )
 
 
