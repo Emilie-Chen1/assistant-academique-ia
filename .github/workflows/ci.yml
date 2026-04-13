@@ -3,7 +3,7 @@ name: Python CI Main
 # Déclenche le pipeline à chaque push ou pull request sur la branche main
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feat-*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -35,3 +35,9 @@ jobs:
       run: |
         # Vérifie que streamlit peut au moins charger l'app sans erreur immédiate
         python -m streamlit help
+
+    - name: Run Tests
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        pytest
