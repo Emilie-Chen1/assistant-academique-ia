@@ -48,3 +48,37 @@ def split_documents(pages):
 if __name__ == "__main__":
     pages = load_documents()
     splits = split_documents(pages) 
+
+# ─────────────────────────────────────────────
+# ÉTAPES 3 & 4 — Vectorstore FAISS + Retrieval
+# ─────────────────────────────────────────────
+
+def build_vectorstore(splits):
+    embedding = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(splits, embedding)
+    vectorstore.save_local(VECTORSTORE_PATH)
+    print("Vectorstore créé et sauvegardé")
+    return vectorstore
+
+def load_vectorstore():
+    embedding = OpenAIEmbeddings()
+    vectorstore = FAISS.load_local(
+        VECTORSTORE_PATH,
+        embedding,
+        allow_dangerous_deserialization=True
+    )
+    print("Vectorstore chargé depuis le disque")
+    return vectorstore
+
+def get_vectorstore():
+    if os.path.exists(VECTORSTORE_PATH):
+        return load_vectorstore()
+    else:
+        pages = load_documents()
+        splits = split_documents(pages)
+        return build_vectorstore(splits)
+
+if __name__ == "__main__":
+    pages = load_documents()
+    splits = split_documents(pages)
+    vectorstore = get_vectorstore()
