@@ -50,22 +50,33 @@ def agent_answer(question: str) -> str:
     try:
         result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
         messages = result.get("messages", [])
+
         if not messages:
             content = "Je n'ai pas pu produire de réponse."
+            tools_used = []
         else:
             raw = messages[-1].content
             content = raw if isinstance(raw, str) else str(raw)
+
+            # Récupérer les outils utilisés depuis les ToolMessage
+            tools_used = []
+            for msg in messages:
+                msg_type = type(msg).__name__
+                if msg_type == "ToolMessage":
+                    tool_name = getattr(msg, "name", None)
+                    if tool_name and tool_name not in tools_used:
+                        tools_used.append(tool_name)
 
         return {
             "content": content,
             "source": "agent",
             "model": AGENT_MODEL,
-            "tools": [getattr(t, "name", str(t)) for t in AGENT_TOOLS],
+            "tools": tools_used,
         }
     except Exception as e:
         return {
             "content": f"Erreur agent: {e}",
             "source": "agent",
             "model": AGENT_MODEL,
-            "tools": [getattr(t, "name", str(t)) for t in AGENT_TOOLS],
+            "tools": [],
         }
