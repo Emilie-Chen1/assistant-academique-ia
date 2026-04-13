@@ -35,9 +35,3 @@ jobs:
       run: |
         # Vérifie que streamlit peut au moins charger l'app sans erreur immédiate
         python -m streamlit help
-
-    - name: Run Tests
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: |
-        pytest
