@@ -30,3 +30,21 @@ def load_documents():
 
 if __name__ == "__main__":
     pages = load_documents()
+
+# ─────────────────────────────────────────────
+# ÉTAPE 2 — Splitting en chunks
+# ─────────────────────────────────────────────
+
+def split_documents(pages):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1500,
+        chunk_overlap=150,
+        length_function=len
+    )
+    splits = text_splitter.split_documents(pages)
+    print(f"Nombre de chunks : {len(splits)}")
+    return splits
+
+if __name__ == "__main__":
+    pages = load_documents()
+    splits = split_documents(pages) 
