@@ -1,12 +1,22 @@
 import streamlit as st
+from langchain_openai import ChatOpenAI
 from rag import rag_answer
 from agents import agent_answer
+
+direct_llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.3
+)
+
+def direct_answer(question: str) -> str:
+    response = direct_llm.invoke(question)
+    return response.content if hasattr(response, "content") else str(response)
 
 st.title("🎓 Assistant Académique")
 
 mode = st.sidebar.selectbox(
     "Mode de réponse",
-    ["RAG", "Agent"]
+    ["RAG", "Agent", "Direct LLM"]
 )
 
 # Historique de chat
@@ -32,6 +42,8 @@ if prompt := st.chat_input("Posez votre question..."):
                 f'{result["content"]}\n\n'
                 f'_Source: {result["source"]} | Model: {result["model"]} | Tools: {tools_text}_'
             )
+        elif mode == "Direct LLM":
+            response = direct_answer(prompt)
         else:
             response = rag_answer(prompt)
         
