@@ -11,3 +11,4 @@ tavily-python
 black
 pylint
 pytest
+flake8
