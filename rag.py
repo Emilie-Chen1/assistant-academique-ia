@@ -1,10 +1,32 @@
 import os
+from dotenv import load_dotenv, find_dotenv
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+
+# Chargement de la clé API
+load_dotenv(find_dotenv())
 
 DOCS_DIR = "docs/"
+VECTORSTORE_PATH = "docs/faiss_index"
 
-def rag_answer(question):
-    # Sécurité : créer le dossier s'il n'existe pas pour éviter le crash
-    if not os.path.exists(DOCS_DIR):
-        os.makedirs(DOCS_DIR)
-    
-    return f"Le module RAG est prêt et sécurisé. Vous avez demandé : {question}"
+# ─────────────────────────────────────────────
+# ÉTAPE 1 — Chargement des PDF
+# ─────────────────────────────────────────────
+
+def load_documents():
+    pdf_files = [f for f in os.listdir(DOCS_DIR) if f.endswith(".pdf")]
+    print(f"PDF trouvés : {pdf_files}")
+    pages = []
+    for pdf_file in pdf_files:
+        loader = PyPDFLoader(os.path.join(DOCS_DIR, pdf_file))
+        pages.extend(loader.load())
+    print(f"Total pages chargées : {len(pages)}")
+    return pages
+
+if __name__ == "__main__":
+    pages = load_documents()
