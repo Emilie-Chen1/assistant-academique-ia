@@ -21,7 +21,12 @@ if prompt := st.chat_input("Posez votre question..."):
     # LOGIQUE DE ROUTAGE (C'est ton rôle d'intégrateur !)
     with st.chat_message("assistant"):
         if "calcule" in prompt.lower() or "météo" in prompt.lower():
-            response = agent_answer(prompt)
+            result = agent_answer(prompt)
+            tools_text = ", ".join(result["tools"]) if result["tools"] else "aucun"
+            response = (
+                f'{result["content"]}\n\n'
+                f'_Source: {result["source"]} | Model: {result["model"]} | Tools: {tools_text}_'
+            )
         else:
             response = rag_answer(prompt)
         st.markdown(response)

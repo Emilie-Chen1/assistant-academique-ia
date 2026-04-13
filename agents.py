@@ -19,8 +19,21 @@ def agent_answer(question: str) -> str:
         result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
         messages = result.get("messages", [])
         if not messages:
-            return "Je n'ai pas pu produire de réponse."
-        content = messages[-1].content
-        return content if isinstance(content, str) else str(content)
+            content = "Je n'ai pas pu produire de réponse."
+        else:
+            raw = messages[-1].content
+            content = raw if isinstance(raw, str) else str(raw)
+
+        return {
+            "content": content,
+            "source": "agent",
+            "model": AGENT_MODEL,
+            "tools": [getattr(t, "name", str(t)) for t in AGENT_TOOLS],
+        }
     except Exception as e:
-        return f"Erreur agent: {e}"
+        return {
+            "content": f"Erreur agent: {e}",
+            "source": "agent",
+            "model": AGENT_MODEL,
+            "tools": [getattr(t, "name", str(t)) for t in AGENT_TOOLS],
+        }
