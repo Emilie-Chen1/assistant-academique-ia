@@ -18,6 +18,7 @@ VECTORSTORE_PATH = "docs/faiss_index"
 # ÉTAPE 1 — Chargement des PDF
 # ─────────────────────────────────────────────
 
+
 def load_documents():
     pdf_files = [f for f in os.listdir(DOCS_DIR) if f.endswith(".pdf")]
     print(f"PDF trouvés : {pdf_files}")
@@ -28,23 +29,25 @@ def load_documents():
     print(f"Total pages chargées : {len(pages)}")
     return pages
 
+
 # ─────────────────────────────────────────────
 # ÉTAPE 2 — Splitting en chunks
 # ─────────────────────────────────────────────
 
+
 def split_documents(pages):
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1500,
-        chunk_overlap=150,
-        length_function=len
+        chunk_size=1500, chunk_overlap=150, length_function=len
     )
     splits = text_splitter.split_documents(pages)
     print(f"Nombre de chunks : {len(splits)}")
     return splits
 
+
 # ─────────────────────────────────────────────
 # ÉTAPES 3 & 4 — Vectorstore FAISS + Retrieval
 # ─────────────────────────────────────────────
+
 
 def build_vectorstore(splits):
     embedding = OpenAIEmbeddings()
@@ -53,15 +56,15 @@ def build_vectorstore(splits):
     print("Vectorstore créé et sauvegardé")
     return vectorstore
 
+
 def load_vectorstore():
     embedding = OpenAIEmbeddings()
     vectorstore = FAISS.load_local(
-        VECTORSTORE_PATH,
-        embedding,
-        allow_dangerous_deserialization=True
+        VECTORSTORE_PATH, embedding, allow_dangerous_deserialization=True
     )
     print("Vectorstore chargé depuis le disque")
     return vectorstore
+
 
 def get_vectorstore():
     if os.path.exists(VECTORSTORE_PATH):
@@ -71,15 +74,18 @@ def get_vectorstore():
         splits = split_documents(pages)
         return build_vectorstore(splits)
 
+
 # ─────────────────────────────────────────────
 # ÉTAPE 5 — QA Chain + fonction finale
 # ─────────────────────────────────────────────
+
 
 def build_qa_chain(vectorstore):
     llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
     template = """Tu es un assistant pédagogique spécialisé dans les notes de cours.
 Réponds à la question uniquement à partir du contexte fourni.
+Pour chaque information importante, tu DOIS citer la source entre parenthèses (ex: Source: nom_du_fichier.pdf).
 Si la réponse n'est pas dans le contexte, dis clairement que tu ne sais pas.
 Réponds toujours en français, de façon claire et structurée.
 
@@ -88,13 +94,19 @@ Contexte :
 
 Question : {question}
 
-Réponse :"""
+Réponse avec citations :"""
 
     prompt = PromptTemplate.from_template(template)
     retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 3})
 
     def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+        formatted_parts = []
+        for doc in docs:
+            source_file = os.path.basename(doc.metadata.get("source", "Inconnu"))
+            page_num = doc.metadata.get("page", 0) + 1
+            content = f"--- SOURCE: {source_file} (Page {page_num}) ---\n{doc.page_content}"
+            formatted_parts.append(content)
+        return "\n\n".join(formatted_parts)
 
     chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -104,10 +116,12 @@ Réponse :"""
     )
     return chain
 
+
 def rag_answer(question: str) -> str:
     vectorstore = get_vectorstore()
     chain = build_qa_chain(vectorstore)
     return chain.invoke(question)
+
 
 if __name__ == "__main__":
     res = rag_answer("Qu'est-ce que le RAG ?")
