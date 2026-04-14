@@ -6,6 +6,13 @@ from langchain_core.tools import tool
 from tavily import TavilyClient
 from urllib.parse import quote
 from urllib.request import urlopen
+from typing import TypedDict, List
+
+class AgentResponse(TypedDict):
+    content: str
+    source: str
+    model: str
+    tools: List[str]
 
 load_dotenv(find_dotenv())
 
@@ -93,13 +100,13 @@ _agent = create_agent(
     tools=AGENT_TOOLS,
     system_prompt=
         "Tu es un assistant utile. "
-        "Utilise calculator pour les calculs, weather pour la météo, et web_search pour les recherches web. "
+        "Utilise calculator pour les calculs, weather pour la météo, et web_search pour information en temps réel et les recherches web . "
         "Réponds en français.",
     # debug=True
 )
 
 
-def agent_answer(question: str) -> str:
+def agent_answer(question: str) -> AgentResponse:
     try:
         result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
         messages = result.get("messages", [])
