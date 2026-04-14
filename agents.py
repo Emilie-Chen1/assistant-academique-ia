@@ -1,5 +1,7 @@
 import numexpr
 import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv, find_dotenv
 from langchain.agents import create_agent
 from langchain_core.tools import tool
@@ -17,6 +19,12 @@ class AgentResponse(TypedDict):
 load_dotenv(find_dotenv())
 
 _tavily = TavilyClient()
+
+@tool
+def current_datetime(timezone: str = "Europe/Paris") -> str:
+    """Retourne date et heure actuelles dans un fuseau donné."""
+    now = datetime.now(ZoneInfo(timezone))
+    return now.strftime("%A %d %B %Y, %H:%M:%S (%Z)")
 
 @tool
 def calculator(expression: str) -> str:
@@ -93,14 +101,14 @@ def weather(city: str) -> str:
         return f"Erreur météo: {e}"
     
 AGENT_MODEL = "openai:gpt-4o-mini"
-AGENT_TOOLS = [calculator, web_search, weather]
+AGENT_TOOLS = [calculator, web_search, weather, current_datetime]
 
 _agent = create_agent(
     model=AGENT_MODEL,
     tools=AGENT_TOOLS,
     system_prompt=
         "Tu es un assistant utile. "
-        "Utilise calculator pour les calculs, weather pour la météo, et web_search pour information en temps réel et les recherches web . "
+        "Utilise calculator pour les calculs, weather pour la météo, web_search pour information en temps réel et les recherches web, et current_datetime pour obtenir la date et l'heure actuelles. "
         "Réponds en français.",
     # debug=True
 )
