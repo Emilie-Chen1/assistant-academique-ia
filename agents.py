@@ -1,5 +1,6 @@
 import numexpr
 import json
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from dotenv import load_dotenv, find_dotenv
@@ -20,6 +21,17 @@ load_dotenv(find_dotenv())
 
 _tavily = TavilyClient()
 
+_ALLOWED = re.compile(r"^[0-9+\-*/().,%^ \t]+$")
+def _validate_expression(expr: str) -> str:
+    expr = expr.strip()
+    if not expr:
+        raise ValueError("expression vide")
+    if len(expr) > 200:
+        raise ValueError("expression trop longue")
+    if not _ALLOWED.match(expr):
+        raise ValueError("caractères non autorisés")
+    return expr
+
 @tool
 def current_datetime(timezone: str = "Europe/Paris") -> str:
     """Retourne date et heure actuelles dans un fuseau donné."""
@@ -30,7 +42,8 @@ def current_datetime(timezone: str = "Europe/Paris") -> str:
 def calculator(expression: str) -> str:
     """Calcule une expression mathématique via numexpr."""
     try:
-        value = numexpr.evaluate(expression.strip())
+        expression = _validate_expression(expression)
+        value = numexpr.evaluate(expression).item()
         if hasattr(value, "item"):
             value = value.item()  # convertit numpy scalar en float/int
         if isinstance(value, float) and value.is_integer():
