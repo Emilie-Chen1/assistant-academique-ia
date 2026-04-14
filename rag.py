@@ -76,6 +76,51 @@ def get_vectorstore():
 
 
 # ─────────────────────────────────────────────
+# MÉMOIRE — Reformulation de la question
+# ─────────────────────────────────────────────
+
+def reformulate_question(question: str, history: list) -> str:
+    """
+    Reformule la question en tenant compte de l'historique
+    pour que le retriever comprenne le contexte.
+    Ex: "Et lui ?" → "Qu'est-ce que le RAG ?"
+    """
+    if not history:
+        return question
+
+    llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+
+    history_text = "\n".join(
+        f"{'Utilisateur' if msg['role'] == 'user' else 'Assistant'}: {msg['content']}"
+        for msg in history[-6:]  # 3 derniers échanges max
+    )
+
+    template = """Tu es un assistant qui reformule des questions.
+Voici l'historique de la conversation :
+{history}
+
+Question actuelle : {question}
+
+Reformule la question actuelle de façon autonome et complète,
+en intégrant le contexte nécessaire de l'historique.
+Si la question est déjà claire et autonome, retourne-la telle quelle.
+Réponds uniquement avec la question reformulée, sans explication.
+
+Question reformulée :"""
+
+    prompt = PromptTemplate.from_template(template)
+    chain = prompt | llm | StrOutputParser()
+
+    reformulated = chain.invoke({
+        "history": history_text,
+        "question": question
+    })
+    print(f"Question originale : {question}")
+    print(f"Question reformulée : {reformulated}")
+    return reformulated
+
+
+# ─────────────────────────────────────────────
 # ÉTAPE 5 — QA Chain + fonction finale
 # ─────────────────────────────────────────────
 
