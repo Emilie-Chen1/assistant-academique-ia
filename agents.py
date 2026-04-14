@@ -9,7 +9,7 @@ from langchain_core.tools import tool
 from tavily import TavilyClient
 from urllib.parse import quote
 from urllib.request import urlopen
-from typing import TypedDict, List
+from typing import TypedDict, List, Optional
 
 class AgentResponse(TypedDict):
     content: str
@@ -139,10 +139,26 @@ _agent = create_agent(
 )
 
 
+def _history_to_openai_messages(history: Optional[List[dict]]) -> List[dict]:
+    if not history:
+        return []
+    out: List[dict] = []
+    for m in history:
+        role = m.get("role")
+        if role not in ("user", "assistant"):
+            continue
+        content = m.get("content")
+        if content is None:
+            content = ""
+        out.append({"role": role, "content": str(content)})
+    return out
+
+
 def agent_answer(question: str, history: list | None = None) -> AgentResponse:
-    _ = history
     try:
-        result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
+        messages = _history_to_openai_messages(history)
+        messages.append({"role": "user", "content": question})
+        result = _agent.invoke({"messages": messages})
         messages = result.get("messages", [])
 
         if not messages:
