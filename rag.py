@@ -163,13 +163,20 @@ Réponse avec citations :"""
 
 
 def rag_answer(question: str, history: list | None = None) -> str:
-    _ = history
     vectorstore = get_vectorstore()
+    
+    # Reformulation de la question avec l'historique
+    question_reformulee = reformulate_question(question, history or [])
+    
     chain = build_qa_chain(vectorstore)
-    return chain.invoke(question)
+    return chain.invoke(question_reformulee)
 
 
 if __name__ == "__main__":
-    res = rag_answer("Qu'est-ce que le RAG ?")
+    history = [
+        {"role": "user", "content": "Qu'est-ce que le RAG ?"},
+        {"role": "assistant", "content": "Le RAG est une technique qui combine LLM et base documentaire."},
+    ]
+    res = rag_answer("Et quels sont ses avantages ?", history)
     print("\n=== RÉPONSE ===")
     print(res)
