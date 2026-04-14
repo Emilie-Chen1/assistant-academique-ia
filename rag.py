@@ -117,7 +117,8 @@ Réponse avec citations :"""
     return chain
 
 
-def rag_answer(question: str) -> str:
+def rag_answer(question: str, history: list | None = None) -> str:
+    _ = history
     vectorstore = get_vectorstore()
     chain = build_qa_chain(vectorstore)
     return chain.invoke(question)

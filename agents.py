@@ -139,7 +139,8 @@ _agent = create_agent(
 )
 
 
-def agent_answer(question: str) -> AgentResponse:
+def agent_answer(question: str, history: list | None = None) -> AgentResponse:
+    _ = history
     try:
         result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
         messages = result.get("messages", [])
