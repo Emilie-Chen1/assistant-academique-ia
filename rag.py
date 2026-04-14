@@ -76,10 +76,13 @@ def get_vectorstore():
 # ─────────────────────────────────────────────
 
 def build_qa_chain(vectorstore):
+    # On utilise gpt-3.5-turbo comme dans ton fichier initial
     llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
+    # Modification du Template pour exiger des citations
     template = """Tu es un assistant pédagogique spécialisé dans les notes de cours.
 Réponds à la question uniquement à partir du contexte fourni.
+Pour chaque information importante, tu DOIS citer la source entre parenthèses (ex: Source: nom_du_fichier.pdf).
 Si la réponse n'est pas dans le contexte, dis clairement que tu ne sais pas.
 Réponds toujours en français, de façon claire et structurée.
 
@@ -88,13 +91,20 @@ Contexte :
 
 Question : {question}
 
-Réponse :"""
+Réponse avec citations :"""
 
     prompt = PromptTemplate.from_template(template)
     retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 3})
 
+    # Modification de format_docs pour inclure le nom du fichier source
     def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
+        formatted_parts = []
+        for doc in docs:
+            # On extrait le nom du fichier (sans le chemin complet)
+            source_file = os.path.basename(doc.metadata.get('source', 'Inconnu'))
+            content = f"--- SOURCE: {source_file} ---\n{doc.page_content}"
+            formatted_parts.append(content)
+        return "\n\n".join(formatted_parts)
 
     chain = (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
