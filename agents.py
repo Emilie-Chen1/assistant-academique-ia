@@ -32,6 +32,18 @@ def _validate_expression(expr: str) -> str:
         raise ValueError("caractères non autorisés")
     return expr
 
+def _format_tavily(result: dict) -> str:
+    items = result.get("results", [])[:5]
+    if not items:
+        return "Aucun résultat trouvé."
+    lines = []
+    for i, r in enumerate(items, 1):
+        title = r.get("title", "Sans titre")
+        url = r.get("url", "URL indisponible")
+        content = (r.get("content", "") or "").strip().replace("\n", " ")
+        lines.append(f"{i}. {title}\n   {url}\n   {content[:220]}")
+    return "\n\n".join(lines)
+
 @tool
 def current_datetime(timezone: str = "Europe/Paris") -> str:
     """Retourne date et heure actuelles dans un fuseau donné."""
@@ -57,7 +69,7 @@ def web_search(query: str) -> str:
     """Recherche web générale via Tavily."""
     try:
         result = _tavily.search(query, max_results=5)
-        return str(result)
+        return _format_tavily(result)
     except Exception as e:
         return f"Erreur recherche web: {e}"
 
