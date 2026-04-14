@@ -103,7 +103,8 @@ Réponse avec citations :"""
         formatted_parts = []
         for doc in docs:
             source_file = os.path.basename(doc.metadata.get("source", "Inconnu"))
-            content = f"--- SOURCE: {source_file} ---\n{doc.page_content}"
+            page_num = doc.metadata.get("page", 0) + 1
+            content = f"--- SOURCE: {source_file} (Page {page_num}) ---\n{doc.page_content}"
             formatted_parts.append(content)
         return "\n\n".join(formatted_parts)
 
