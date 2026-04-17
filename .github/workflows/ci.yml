@@ -31,6 +31,11 @@ jobs:
         # Vérification des erreurs de syntaxe (le build échoue si le code est cassé)
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
+      - name: Run unit tests with pytest
+      run: |
+        pip install pytest
+        pytest test_app.py -v
+        
     - name: Test Streamlit launch
       run: |
         # Vérifie que streamlit peut au moins charger l'app sans erreur immédiate

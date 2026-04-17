@@ -26,7 +26,6 @@ def test_rag_answer_mocked(mock_build_chain, mock_vectorstore):
     
     # Simulation de la chaîne de QA
     mock_chain = MagicMock()
-    # On force invoke() à renvoyer une chaîne de caractères pure
     mock_chain.invoke.return_value = "D'après vos cours, le RAG est utile."
     mock_build_chain.return_value = mock_chain
 
