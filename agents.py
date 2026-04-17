@@ -1,21 +1,61 @@
 import numexpr
 import json
+import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv, find_dotenv
 from langchain.agents import create_agent
 from langchain_core.tools import tool
 from tavily import TavilyClient
 from urllib.parse import quote
 from urllib.request import urlopen
+from typing import TypedDict, List, Optional
+
+class AgentResponse(TypedDict):
+    content: str
+    source: str
+    model: str
+    tools: List[str]
 
 load_dotenv(find_dotenv())
 
 _tavily = TavilyClient()
 
+_ALLOWED = re.compile(r"^[0-9+\-*/().,%^ \t]+$")
+def _validate_expression(expr: str) -> str:
+    expr = expr.strip()
+    if not expr:
+        raise ValueError("expression vide")
+    if len(expr) > 200:
+        raise ValueError("expression trop longue")
+    if not _ALLOWED.match(expr):
+        raise ValueError("caractères non autorisés")
+    return expr
+
+def _format_tavily(result: dict) -> str:
+    items = result.get("results", [])[:5]
+    if not items:
+        return "Aucun résultat trouvé."
+    lines = []
+    for i, r in enumerate(items, 1):
+        title = r.get("title", "Sans titre")
+        url = r.get("url", "URL indisponible")
+        content = (r.get("content", "") or "").strip().replace("\n", " ")
+        lines.append(f"{i}. {title}\n   {url}\n   {content[:220]}")
+    return "\n\n".join(lines)
+
+@tool
+def current_datetime(timezone: str = "Europe/Paris") -> str:
+    """Retourne date et heure actuelles dans un fuseau donné."""
+    now = datetime.now(ZoneInfo(timezone))
+    return now.strftime("%A %d %B %Y, %H:%M:%S (%Z)")
+
 @tool
 def calculator(expression: str) -> str:
     """Calcule une expression mathématique via numexpr."""
     try:
-        value = numexpr.evaluate(expression.strip())
+        expression = _validate_expression(expression)
+        value = numexpr.evaluate(expression).item()
         if hasattr(value, "item"):
             value = value.item()  # convertit numpy scalar en float/int
         if isinstance(value, float) and value.is_integer():
@@ -29,7 +69,7 @@ def web_search(query: str) -> str:
     """Recherche web générale via Tavily."""
     try:
         result = _tavily.search(query, max_results=5)
-        return str(result)
+        return _format_tavily(result)
     except Exception as e:
         return f"Erreur recherche web: {e}"
 
@@ -86,22 +126,39 @@ def weather(city: str) -> str:
         return f"Erreur météo: {e}"
     
 AGENT_MODEL = "openai:gpt-4o-mini"
-AGENT_TOOLS = [calculator, web_search, weather]
+AGENT_TOOLS = [calculator, web_search, weather, current_datetime]
 
 _agent = create_agent(
     model=AGENT_MODEL,
     tools=AGENT_TOOLS,
     system_prompt=
         "Tu es un assistant utile. "
-        "Utilise calculator pour les calculs, weather pour la météo, et web_search pour les recherches web. "
+        "Utilise calculator pour les calculs, weather pour la météo, web_search pour information en temps réel et les recherches web, et current_datetime pour obtenir la date et l'heure actuelles. "
         "Réponds en français.",
     # debug=True
 )
 
 
-def agent_answer(question: str) -> str:
+def _history_to_openai_messages(history: Optional[List[dict]]) -> List[dict]:
+    if not history:
+        return []
+    out: List[dict] = []
+    for m in history:
+        role = m.get("role")
+        if role not in ("user", "assistant"):
+            continue
+        content = m.get("content")
+        if content is None:
+            content = ""
+        out.append({"role": role, "content": str(content)})
+    return out
+
+
+def agent_answer(question: str, history: list | None = None) -> AgentResponse:
     try:
-        result = _agent.invoke({"messages": [{"role": "user", "content": question}]})
+        messages = _history_to_openai_messages(history)
+        messages.append({"role": "user", "content": question})
+        result = _agent.invoke({"messages": messages})
         messages = result.get("messages", [])
 
         if not messages:
